@@ -1,5 +1,4 @@
 [profile.default]
-src = 'contracts'
 out = 'out'
 fuzz_runs = 5000
 libs = ['lib']
