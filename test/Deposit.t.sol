@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import './proStakingTest.t.sol';
 
-contract tesDeposit is ProStakingTest {
+contract TestDeposit is ProStakingTest {
 
     function setUp() public override {
         super.setUp();
@@ -11,6 +11,7 @@ contract tesDeposit is ProStakingTest {
     }
 
     function testDeposit(uint256 tokenId) public {
+        vm.assume(tokenId > 0);
         vm.startPrank(stakerOne);
         vm.expectEmit(true,true,true,true, address(givToken));
         emit Approval(address(stakerOne), address(proStaking), upgradePrice);
@@ -30,6 +31,8 @@ contract tesDeposit is ProStakingTest {
         proStaking.depositAndMint(tokenId);
 
         assertEq(proStaking.totalSupply(tokenId), 1);
+        assertEq(givToken.balanceOf(address(proStaking)), upgradePrice);
+
 
         givToken.approve(address(proStaking), upgradePrice);
         // single user cannot have more than one of a given tokenId
@@ -43,6 +46,8 @@ contract tesDeposit is ProStakingTest {
         proStaking.depositAndMint(tokenId);
 
         assertEq(proStaking.totalSupply(tokenId), 2);
+        assertEq(givToken.balanceOf(address(proStaking)), upgradePrice * 2);
+
     }
 
     function testDepositMultiple() public {
@@ -89,15 +94,10 @@ contract tesDeposit is ProStakingTest {
         givToken.approve(address(proStaking), upgradePrice);
         proStaking.depositAndMint(1);
         vm.stopPrank();
-        // fix this to continue testing after 1st fail;
-        vm.prank(omniBridge);
-        givToken.mint(stakerWithNoTokens, 0.5 ether);
-
-        vm.startPrank(stakerWithNoTokens);
-        proStaking.depositAndMint(1);        
     }
 
     function testUpgradePrice(uint256 amount) public {
+        amount = bound(amount, 1, MAX_GIV_BALANCE);
         vm.prank(deployer);
         proStaking.setPrice(amount);
 

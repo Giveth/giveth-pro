@@ -6,11 +6,9 @@ import '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
 import '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol';
 import 'forge-std/Test.sol';
 import 'forge-std/console.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import './interfaces/IERC20Bridged.sol';
 
 contract ProStakingTest is Test {
-    using SafeERC20 for IERC20;
     uint256 public constant MAX_GIV_BALANCE = 10 ** 28; // 10 Billion, Total minted giv is 1B at the moment
 
 
@@ -23,6 +21,7 @@ contract ProStakingTest is Test {
     TransparentUpgradeableProxy proxy;
     IERC20Bridged givToken;
     uint256 upgradePrice = 1 ether;
+    uint256 intialMintAmount = 100 ether;
     address deployer = address(1);
     address givethMultisig = address(2);
     address stakerOne = address(3);
@@ -47,7 +46,7 @@ contract ProStakingTest is Test {
     }
 
     function setUp() public virtual {
-        vm.deal(deployer, 100 ether);
+        vm.deal(deployer, intialMintAmount);
         vm.startPrank(deployer);
         givToken = IERC20Bridged(address(givTokenAddress));
         proxyAdmin = new ProxyAdmin();
@@ -58,8 +57,8 @@ contract ProStakingTest is Test {
         vm.stopPrank();
 
         vm.startPrank(omniBridge);
-        givToken.mint(stakerOne, 100 ether);
-        givToken.mint(stakerTwo, 100 ether);
+        givToken.mint(stakerOne, intialMintAmount);
+        givToken.mint(stakerTwo, intialMintAmount);
         vm.stopPrank();
 
         vm.label(deployer, 'deployer');
@@ -70,6 +69,7 @@ contract ProStakingTest is Test {
         vm.label(address(proxyAdmin), 'proxyAdmin');
         vm.label(address(givethMultisig), 'givethMultisig');
         vm.label(address(implementation), 'proStakingImplementation');
+        vm.label(address(proxy), 'proStakingProxy');
 
     }
 }

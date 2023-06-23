@@ -29,11 +29,13 @@ contract ProStaking is
     error WithdrawalsDisabled();
     error NoDepositExists();
     error RecipientAlreadyHasDeposit();
+    error CannotTransferToSelf();
+    error CannotBeZero();
 
     IERC20 public depositToken;
     uint256 public upgradePrice;
     address public slashRecipient;
-    bool public isWithdrawalsEnabled = true;
+    bool public isWithdrawalsEnabled;
 
     mapping(uint256 => mapping(address => uint256)) public depositInfo;
 
@@ -50,14 +52,14 @@ contract ProStaking is
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PRICE_CONTROLLER, msg.sender);
-
+        isWithdrawalsEnabled = true;
         depositToken = IERC20(_depositToken);
         upgradePrice = _upgradePrice;
         slashRecipient = _slashRecipient;
     }
 
     function depositAndMint(uint256 tokenId) external {
-        if (depositInfo[tokenId][msg.sender] != 0) {
+        if (depositInfo[tokenId][msg.sender] > 0) {
             revert RecipientAlreadyHasDeposit();
         }
         depositToken.safeTransferFrom(msg.sender, address(this), upgradePrice);
@@ -69,12 +71,16 @@ contract ProStaking is
 
     function _transferDepositFrom(address from, address to, uint256 tokenId) internal {
         uint256 depositAmount = depositInfo[tokenId][from];
-        if (depositInfo[tokenId][to] != 0) {
+        if (from == to) {
+            revert CannotTransferToSelf();
+        }
+        if (depositInfo[tokenId][to] > 0) {
             revert RecipientAlreadyHasDeposit();
         }
         if (depositAmount == 0) {
             revert NoDepositExists();
         }
+        safeTransferFrom(from, to, tokenId, 1, '');
         depositInfo[tokenId][from] = 0;
         depositInfo[tokenId][to] = depositAmount;
         emit TransferDeposit(from, to, tokenId, depositAmount);
@@ -86,30 +92,39 @@ contract ProStaking is
         _transferDepositFrom(msg.sender, to, tokenId);
     }
 
-    function _withdrawAndBurn(uint256 tokenId, address account) internal {
+    function _withdrawAndBurn(uint256 tokenId, address account, address depositRecipient) internal {
         uint256 depositAmount = depositInfo[tokenId][account];
         if (depositAmount == 0) {
             revert NoDepositExists();
         }
         depositInfo[tokenId][account] = 0;
         _burn(account, tokenId, 1);
-        depositToken.safeTransfer(account, depositAmount);
+        depositToken.safeTransfer(depositRecipient, depositAmount);
         emit RemoveStake(account, tokenId);
     }
 
     function withdrawAndBurn(uint256 tokenId) external {
-        if (!isWithdrawalsEnabled) {
+        uint256 priceWithdrawn = depositInfo[tokenId][msg.sender];
+        if (isWithdrawalsEnabled == false) {
             revert WithdrawalsDisabled();
         }
-        _withdrawAndBurn(tokenId, msg.sender);
-        emit Withdraw(msg.sender, tokenId, depositInfo[tokenId][msg.sender]);
+        _withdrawAndBurn(tokenId, msg.sender, msg.sender);
+        emit Withdraw(msg.sender, tokenId, priceWithdrawn);
     }
 
+    function slash(uint256 tokenId, address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 amountSlashed = depositInfo[tokenId][account];
+        _withdrawAndBurn(tokenId, account, slashRecipient);
+        emit Slash(account, tokenId, amountSlashed);
+    }
     function setSlashRecipient(address _slashRecipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
         slashRecipient = _slashRecipient;
     }
 
     function setPrice(uint256 _upgradePrice) external onlyRole(PRICE_CONTROLLER) {
+        if (_upgradePrice <= 0) {
+            revert CannotBeZero();
+        }
         upgradePrice = _upgradePrice;
     }
 
@@ -117,10 +132,6 @@ contract ProStaking is
         isWithdrawalsEnabled = _isWithdrawalsEnabled;
     }
 
-    function slash(uint256 tokenId, address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _withdrawAndBurn(tokenId, account);
-        emit Slash(account, tokenId, depositInfo[tokenId][account]);
-    }
 
     function getDepositPrice(uint256 tokenId, address account) external view returns (uint256) {
         return depositInfo[tokenId][account];
