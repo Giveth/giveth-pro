@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import '../src/proStaking.sol';
+import '../src/roundManager.sol';
 import '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 import '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol';
 import 'forge-std/Test.sol';
@@ -11,8 +12,6 @@ import './interfaces/IERC20Bridged.sol';
 contract ProStakingTest is Test {
     uint256 public constant MAX_GIV_BALANCE = 10 ** 28; // 10 Billion, Total minted giv is 1B at the moment
 
-
-
     address omniBridge = 0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d;
     address givTokenAddress = 0x4f4F9b8D5B4d0Dc10506e5551B0513B61fD59e75;
     ProStaking implementation;
@@ -20,6 +19,10 @@ contract ProStakingTest is Test {
     ProxyAdmin proxyAdmin;
     TransparentUpgradeableProxy proxy;
     IERC20Bridged givToken;
+
+    RoundManager roundManager;
+    
+
     uint256 upgradePrice = 1 ether;
     uint256 intialMintAmount = 100 ether;
     address deployer = address(1);
@@ -70,6 +73,5 @@ contract ProStakingTest is Test {
         vm.label(address(givethMultisig), 'givethMultisig');
         vm.label(address(implementation), 'proStakingImplementation');
         vm.label(address(proxy), 'proStakingProxy');
-
     }
 }

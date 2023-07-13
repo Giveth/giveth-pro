@@ -4,35 +4,33 @@ pragma solidity ^0.8.9;
 import './proStakingTest.t.sol';
 
 contract TestDeposit is ProStakingTest {
-
     function setUp() public override {
         super.setUp();
-        console.log("upgrade price is", upgradePrice);
+        console.log('upgrade price is', upgradePrice);
     }
 
     function testDeposit(uint256 tokenId) public {
         vm.assume(tokenId > 0);
         vm.startPrank(stakerOne);
-        vm.expectEmit(true,true,true,true, address(givToken));
+        vm.expectEmit(true, true, true, true, address(givToken));
         emit Approval(address(stakerOne), address(proStaking), upgradePrice);
 
-        vm.expectEmit(true,true,true,true, address(givToken));
+        vm.expectEmit(true, true, true, true, address(givToken));
         emit Transfer(address(stakerOne), address(proStaking), upgradePrice);
 
-        vm.expectEmit(true,true,true,true, address(proStaking));
+        vm.expectEmit(true, true, true, true, address(proStaking));
         emit TransferSingle(address(stakerOne), address(0), address(stakerOne), tokenId, 1);
 
         vm.expectEmit(true, true, true, true, address(proStaking));
         emit Deposit(address(stakerOne), tokenId, upgradePrice);
 
-        vm.expectEmit(true,true,true,true, address(proStaking));
+        vm.expectEmit(true, true, true, true, address(proStaking));
         emit AddStake(address(stakerOne), tokenId);
         givToken.approve(address(proStaking), upgradePrice);
         proStaking.depositAndMint(tokenId);
 
         assertEq(proStaking.totalSupply(tokenId), 1);
         assertEq(givToken.balanceOf(address(proStaking)), upgradePrice);
-
 
         givToken.approve(address(proStaking), upgradePrice);
         // single user cannot have more than one of a given tokenId
@@ -47,7 +45,6 @@ contract TestDeposit is ProStakingTest {
 
         assertEq(proStaking.totalSupply(tokenId), 2);
         assertEq(givToken.balanceOf(address(proStaking)), upgradePrice * 2);
-
     }
 
     function testDepositMultiple() public {
@@ -66,7 +63,7 @@ contract TestDeposit is ProStakingTest {
 
         givToken.approve(address(proStaking), upgradePrice);
         proStaking.depositAndMint(idThree);
-         vm.stopPrank();
+        vm.stopPrank();
 
         assertEq(proStaking.totalSupply(idOne), 1);
         assertEq(proStaking.totalSupply(idTwo), 1);
@@ -89,7 +86,6 @@ contract TestDeposit is ProStakingTest {
     }
 
     function testFailDepositNoBalance() public {
-
         vm.startPrank(stakerWithNoTokens);
         givToken.approve(address(proStaking), upgradePrice);
         proStaking.depositAndMint(1);
@@ -108,6 +104,4 @@ contract TestDeposit is ProStakingTest {
         givToken.approve(address(proStaking), amount);
         proStaking.depositAndMint(1);
     }
-
-
 }

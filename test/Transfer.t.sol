@@ -4,11 +4,10 @@ pragma solidity ^0.8.9;
 import './proStakingTest.t.sol';
 
 contract TestTransfers is ProStakingTest {
-
     function setUp() public override {
         super.setUp();
-        console.log("upgrade price is", upgradePrice);
-         vm.startPrank(stakerOne);
+        console.log('upgrade price is', upgradePrice);
+        vm.startPrank(stakerOne);
         givToken.approve(address(proStaking), upgradePrice);
         proStaking.depositAndMint(1);
         assertEq(proStaking.balanceOf(stakerOne, 1), 1);
@@ -18,16 +17,16 @@ contract TestTransfers is ProStakingTest {
     function testTransfer() public {
         vm.startPrank(stakerOne);
 
-        vm.expectEmit(true,true,true,true, address(proStaking));
+        vm.expectEmit(true, true, true, true, address(proStaking));
         emit TransferDeposit(address(stakerOne), address(stakerTwo), 1, upgradePrice);
 
-        vm.expectEmit(true,true,true,true, address(proStaking));
+        vm.expectEmit(true, true, true, true, address(proStaking));
         emit RemoveStake(address(stakerOne), 1);
 
-        vm.expectEmit(true,true,true,true, address(proStaking));
+        vm.expectEmit(true, true, true, true, address(proStaking));
         emit AddStake(address(stakerTwo), 1);
 
-        proStaking.transferDeposit( stakerTwo, 1);
+        proStaking.transferDeposit(stakerTwo, 1);
 
         // check that the balances are correctly transferred
         assertEq(proStaking.balanceOf(stakerOne, 1), 0);
@@ -52,12 +51,11 @@ contract TestTransfers is ProStakingTest {
         proStaking.transferDeposit(stakerOne, 1);
         vm.stopPrank();
 
-        // test transfer to self 
+        // test transfer to self
         vm.prank(stakerOne);
         vm.expectRevert(ProStaking.CannotTransferToSelf.selector);
         proStaking.transferDeposit(stakerOne, 1);
     }
-
 
     function testMultipleTransfers() public {
         // 1st transfer
