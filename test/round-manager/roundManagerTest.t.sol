@@ -149,9 +149,6 @@ contract RoundManagerTest is Test {
         assertEq(activeRounds[1], 4);
         assertEq(activeRounds[2], 5);
         assertEq(activeRounds[3], 6);
-
-
-        
     }
 
     function testLockRound() public {
@@ -163,8 +160,7 @@ contract RoundManagerTest is Test {
         emit RoundLocked(1);
 
         roundManager.lockRound(1);
-            (, , bool isRoundActive, bool isWithdrawalsEnabled) =
-            roundManager.rounds(1);
+        (,, bool isRoundActive, bool isWithdrawalsEnabled) = roundManager.rounds(1);
 
         assertEq(isRoundActive, true);
         assertEq(isWithdrawalsEnabled, false);
@@ -174,7 +170,7 @@ contract RoundManagerTest is Test {
 
         roundManager.unlockRound(1);
 
-        (, , isRoundActive, isWithdrawalsEnabled) = roundManager.rounds(1);
+        (,, isRoundActive, isWithdrawalsEnabled) = roundManager.rounds(1);
 
         assertEq(isRoundActive, true);
         assertEq(isWithdrawalsEnabled, true);
@@ -185,15 +181,15 @@ contract RoundManagerTest is Test {
 
         roundManager.createRound('round one');
         roundManager.createRound('round two');
-        
+
         vm.expectRevert(abi.encodeWithSelector(RoundManager.RoundDoesNotExist.selector, 3));
         roundManager.activateRound(3);
-        
+
         vm.expectRevert(abi.encodeWithSelector(RoundManager.RoundDoesNotExist.selector, 3));
         roundManager.getRoundInfo(3);
 
         vm.expectRevert(abi.encodeWithSelector(RoundManager.RoundDoesNotExist.selector, 3));
-        roundManager.renameAndActivateRound(3,'other round 3');
+        roundManager.renameAndActivateRound(3, 'other round 3');
 
         vm.expectRevert(abi.encodeWithSelector(RoundManager.RoundDoesNotExist.selector, 3));
         roundManager.lockRound(3);
@@ -209,11 +205,9 @@ contract RoundManagerTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(RoundManager.RoundDoesNotExist.selector, 3));
         roundManager.renameRound(3, 'other round 3');
-
     }
 
-    function testSetMaxRounds() public   
-    {
+    function testSetMaxRounds() public {
         vm.startPrank(roundAdmin);
 
         // verify that the maxActiveRounds matches the global variable at start
@@ -240,7 +234,7 @@ contract RoundManagerTest is Test {
         roundManager.activateRound(1);
 
         // expect revert setting maxActiveRounds to less than the number of active rounds
-        vm.expectRevert(abi.encodeWithSelector(RoundManager.MaxRoundsLessThanActiveRounds.selector, 1,2));
+        vm.expectRevert(abi.encodeWithSelector(RoundManager.MaxRoundsLessThanActiveRounds.selector, 1, 2));
         roundManager.setMaxActiveRounds(1);
 
         // set max active rounds to four
@@ -250,12 +244,9 @@ contract RoundManagerTest is Test {
         // create another round and activate round one, for a total of 4 active rounds
         roundManager.createRound('round four');
         roundManager.activateRound(1);
-
-
     }
 
     function testGetWithdrawalsEnabled() public {
-
         vm.startPrank(roundAdmin);
 
         roundManager.createRound('round one');
@@ -286,13 +277,13 @@ contract RoundManagerTest is Test {
         roundManager.renameRound(1, 'other round one');
 
         // verify the name had changed
-        (,string memory name , , ) = roundManager.rounds(1);
+        (, string memory name,,) = roundManager.rounds(1);
         assertEq(name, 'other round one');
 
         // verify that we can activate and change the name at the same time
         roundManager.deactivateRound(1);
         roundManager.renameAndActivateRound(1, 'round one again');
-        (, name , , ) = roundManager.rounds(1);
+        (, name,,) = roundManager.rounds(1);
         assertEq(name, 'round one again');
 
         // throw an error if we try to change the name to a name that is too long

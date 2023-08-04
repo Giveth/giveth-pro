@@ -82,4 +82,57 @@ contract TestTransfers is ProStakingTest {
         assertEq(proStaking.depositInfo(1, stakerWithNoTokens), 0);
         assertEq(proStaking.depositInfo(1, stakerOne), upgradePrice);
     }
+
+    function testTransferWithRoundApplications() public {
+        vm.startPrank(stakerOne);
+        proStaking.applyForRound(1, 1);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit UnappliedForRound(address(stakerOne), 1, 1);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit AppliedForRound(address(stakerTwo), 1, 1);
+
+        proStaking.transferDeposit(stakerTwo, 1);
+        assertEq(proStaking.hasAppliedForRound(stakerTwo, 1, 1), true);
+        assertEq(proStaking.hasAppliedForRound(stakerOne, 1, 1), false);
+    }
+
+    function testTransferWithMultipleRoundApplications() public {
+        vm.startPrank(roundAdmin);
+        roundManager.createRound('round two');
+        roundManager.createRound('round three');
+        vm.stopPrank();
+
+        vm.startPrank(stakerOne);
+        proStaking.applyForRound(1, 1);
+        proStaking.applyForRound(1, 2);
+        proStaking.applyForRound(1, 3);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit UnappliedForRound(address(stakerOne), 1, 1);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit AppliedForRound(address(stakerTwo), 1, 1);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit UnappliedForRound(address(stakerOne), 1, 2);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit AppliedForRound(address(stakerTwo), 1, 2);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit UnappliedForRound(address(stakerOne), 1, 3);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit AppliedForRound(address(stakerTwo), 1, 3);
+
+        proStaking.transferDeposit(stakerTwo, 1);
+        assertEq(proStaking.hasAppliedForRound(stakerTwo, 1, 1), true);
+        assertEq(proStaking.hasAppliedForRound(stakerTwo, 1, 2), true);
+        assertEq(proStaking.hasAppliedForRound(stakerTwo, 1, 3), true);
+        assertEq(proStaking.hasAppliedForRound(stakerOne, 1, 1), false);
+        assertEq(proStaking.hasAppliedForRound(stakerOne, 1, 2), false);
+        assertEq(proStaking.hasAppliedForRound(stakerOne, 1, 3), false);
+    }
 }

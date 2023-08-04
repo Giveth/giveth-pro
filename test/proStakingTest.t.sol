@@ -14,22 +14,26 @@ contract ProStakingTest is Test {
 
     address omniBridge = 0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d;
     address givTokenAddress = 0x4f4F9b8D5B4d0Dc10506e5551B0513B61fD59e75;
-    ProStaking implementation;
-    ProStaking proStaking;
     ProxyAdmin proxyAdmin;
-    TransparentUpgradeableProxy proxy;
     IERC20Bridged givToken;
 
+    ProStaking implementation;
+    ProStaking proStaking;
+    TransparentUpgradeableProxy proxy;
+
     RoundManager roundManager;
-    
+    RoundManager roundManagerImplementation;
+    TransparentUpgradeableProxy roundManagerProxy;
 
     uint256 upgradePrice = 1 ether;
     uint256 intialMintAmount = 100 ether;
+    uint8 maxActiveRounds = 5;
     address deployer = address(1);
     address givethMultisig = address(2);
     address stakerOne = address(3);
     address stakerTwo = address(4);
     address stakerWithNoTokens = address(5);
+    address roundAdmin = address(6);
 
     event Deposit(address indexed account, uint256 indexed tokenId, uint256 amount);
     event Withdraw(address indexed account, uint256 indexed tokenId, uint256 amount);
@@ -42,6 +46,8 @@ contract ProStakingTest is Test {
     event TransferSingle(
         address indexed _operator, address indexed _from, address indexed _to, uint256 _id, uint256 _value
     );
+    event AppliedForRound(address indexed account, uint256 indexed tokenId, uint256 roundId);
+    event UnappliedForRound(address indexed account, uint256 indexed tokenId, uint256 roundId);
 
     constructor() {
         uint256 forkId = vm.createFork('https://rpc.gnosis.gateway.fm');
@@ -51,13 +57,24 @@ contract ProStakingTest is Test {
     function setUp() public virtual {
         vm.deal(deployer, intialMintAmount);
         vm.startPrank(deployer);
+
         givToken = IERC20Bridged(address(givTokenAddress));
         proxyAdmin = new ProxyAdmin();
+
+        roundManagerImplementation = new RoundManager();
+        roundManagerProxy = new TransparentUpgradeableProxy(address(roundManagerImplementation), address(proxyAdmin),
+         abi.encodeWithSelector(RoundManager(roundManager).initialize.selector, maxActiveRounds));
+        roundManager = RoundManager(address(roundManagerProxy));
+
         implementation = new ProStaking();
-        proxy =
-        new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), abi.encodeWithSelector(ProStaking(proStaking).initialize.selector, givToken, upgradePrice, givethMultisig ));
+        proxy = new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin),
+         abi.encodeWithSelector(ProStaking(proStaking).initialize.selector, givToken, upgradePrice, givethMultisig, roundManager));
         proStaking = ProStaking(address(proxy));
+        roundManager.grantRole(roundManager.ROUND_MANAGER(), roundAdmin);
+
         vm.stopPrank();
+        vm.prank(roundAdmin);
+        roundManager.createRound('round one');
 
         vm.startPrank(omniBridge);
         givToken.mint(stakerOne, intialMintAmount);
@@ -68,10 +85,16 @@ contract ProStakingTest is Test {
         vm.label(stakerOne, 'stakerOne');
         vm.label(stakerTwo, 'stakerTwo');
         vm.label(address(givToken), 'givToken');
-        vm.label(address(proStaking), 'proStaking');
         vm.label(address(proxyAdmin), 'proxyAdmin');
         vm.label(address(givethMultisig), 'givethMultisig');
+
+        vm.label(address(proStaking), 'proStaking');
         vm.label(address(implementation), 'proStakingImplementation');
         vm.label(address(proxy), 'proStakingProxy');
+
+        vm.label(address(roundManagerProxy), 'roundManagerProxy');
+        vm.label(address(roundManager), 'roundManager');
+        vm.label(address(roundManagerImplementation), 'roundManagerImplementation');
+        vm.label(address(roundAdmin), 'roundAdmin');
     }
 }

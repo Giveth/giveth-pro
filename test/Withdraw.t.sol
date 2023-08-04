@@ -16,12 +16,23 @@ contract TestWithdrawals is ProStakingTest {
         proStaking.depositAndMint(tokenId);
         assertEq(proStaking.balanceOf(stakerOne, tokenId), 1);
         vm.stopPrank();
+
+        vm.prank(roundAdmin);
+        roundManager.createRound('round two');
     }
 
     function testWithdraw() public {
         vm.startPrank(stakerOne);
+        proStaking.applyForRound(tokenId, 1);
+        proStaking.applyForRound(tokenId, 2);
+        
         //console.log("are withdrawals enabled?", proStaking.isWithdrawalsEnabled());
 
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit UnappliedForRound(address(stakerOne), tokenId, 1);
+
+        vm.expectEmit(true, true, true, true, address(proStaking));
+        emit UnappliedForRound(address(stakerOne), tokenId, 2);
         // burn NFT
         vm.expectEmit(true, true, true, true, address(proStaking));
         emit TransferSingle(address(stakerOne), address(stakerOne), address(0), 1, 1);
@@ -38,11 +49,14 @@ contract TestWithdrawals is ProStakingTest {
         vm.expectEmit(true, true, true, true, address(proStaking));
         emit Withdraw(address(stakerOne), tokenId, upgradePrice);
 
+
         proStaking.withdrawAndBurn(tokenId);
 
         assertEq(proStaking.balanceOf(stakerOne, tokenId), 0);
         assertEq(proStaking.depositInfo(tokenId, stakerOne), 0);
         assertEq(givToken.balanceOf(address(stakerOne)), intialMintAmount);
+        assertEq(proStaking.hasAppliedForRound(stakerOne, tokenId, 1), false);
+        assertEq(proStaking.hasAppliedForRound(stakerOne, tokenId, 2), false);
     }
 
     function testDoubleWithdrawRevert() public {
@@ -82,6 +96,17 @@ contract TestWithdrawals is ProStakingTest {
 
         //attempt to withdraw deposit that has been transferred to new owners from old owner
         vm.expectRevert(ProStaking.NoDepositExists.selector);
+        proStaking.withdrawAndBurn(tokenId);
+    }
+
+    function testWithdrawOnLockedRound() public {
+        uint256 roundId = 1;
+        vm.prank(roundAdmin);
+        roundManager.lockRound(roundId);
+
+        vm.startPrank(stakerOne);
+        proStaking.applyForRound(tokenId, roundId);
+        vm.expectRevert(abi.encodeWithSelector(ProStaking.RoundLocked.selector, roundId));
         proStaking.withdrawAndBurn(tokenId);
     }
 }

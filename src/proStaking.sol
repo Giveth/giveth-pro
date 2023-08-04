@@ -179,6 +179,7 @@ contract ProStaking is
             revert NoDepositExists();
         }
         depositInfo[tokenId][account] = 0;
+        _unapplyForAllRounds(account, tokenId);
         _burn(account, tokenId, 1);
         depositToken.safeTransfer(depositRecipient, depositAmount);
         emit RemoveStake(account, tokenId);
@@ -187,7 +188,6 @@ contract ProStaking is
     function withdrawAndBurn(uint256 tokenId) external _checkRoundLocked(msg.sender, tokenId) {
         uint256 priceWithdrawn = depositInfo[tokenId][msg.sender];
         _withdrawAndBurn(tokenId, msg.sender, msg.sender);
-        _unapplyForAllRounds(msg.sender, tokenId);
         emit Withdraw(msg.sender, tokenId, priceWithdrawn);
     }
 
@@ -217,6 +217,10 @@ contract ProStaking is
                 _unapplyForRound(account, tokenId, activeRounds[i]);
             }
         }
+    }
+
+    function hasAppliedForRound(address depositor, uint256 tokenId, uint256 roundId) external view returns (bool) {
+        return appliedForRound[tokenId][depositor][roundId];
     }
 
     function setSlashRecipient(address _slashRecipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
